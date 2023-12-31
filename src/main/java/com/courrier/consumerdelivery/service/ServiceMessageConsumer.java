@@ -1,5 +1,7 @@
 package com.courrier.consumerdelivery.service;
 
+import com.courrier.consumerdelivery.dto.AdjustementModified;
+import com.courrier.consumerdelivery.dto.BonusModified;
 import com.courrier.consumerdelivery.dto.DeliveryCreatedDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,45 +29,93 @@ public class ServiceMessageConsumer {
 
         @RabbitListener(queues = "createdDelivery")
         public void consumeMessageCreated(String message) throws JsonProcessingException {
-            saveMessageDynamoDB(message);
-            System.out.println("Mensagem recebida: " + message);
+            saveMessageDynamoDB(message, "createdDelivery");
         }
 
         @RabbitListener(queues = "adjustmentModified")
-        public void consumeMessageAdjustment(String message) {
-
-            System.out.println("Mensagem recebida: " + message);
-
+        public void consumeMessageAdjustment(String message) throws JsonProcessingException {
+            saveMessageDynamoDB(message, "adjustmentModified");
         }
 
         @RabbitListener(queues = "bonusModified")
-        public void consumeMessagBonus(String message) {
-
-            System.out.println("Mensagem recebida: " + message);
-
+        public void consumeMessagBonus(String message) throws JsonProcessingException {
+            saveMessageDynamoDB(message, "bonusModified");
         }
 
 
-    public void saveMessageDynamoDB(String message) throws JsonProcessingException {
+    public void saveMessageDynamoDB(String message, String typeName) throws JsonProcessingException {
         HashMap<String, AttributeValue> itemValues = new HashMap<>();
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        DeliveryCreatedDTO delivery = objectMapper.readValue(message, DeliveryCreatedDTO.class);
-        try {
 
-            itemValues.put("delivery_id", AttributeValue.builder().s(delivery.getDeliveryId().toString()).build());
-            itemValues.put("courierId", AttributeValue.builder().s(delivery.getCourierId().toString()).build());
-            itemValues.put("createdTimestamp", AttributeValue.builder().n(String.valueOf(delivery.getCreatedTimestamp().toEpochMilli())).build());
-            itemValues.put("value", AttributeValue.builder().n(delivery.getValue()).build());
 
+
+
+            itemValues=  extracted( message, typeName);
+            String nameTable = "";
+            switch (typeName)
+            {
+                case "createdDelivery":
+                    nameTable = "Delivery";
+                    break;
+                case "adjustmentModified":
+                    nameTable = "Adjustment";
+                    break;
+                case "bonusModified":
+                    nameTable = "Bonus";
+                    break;
+            }
             PutItemRequest request = PutItemRequest.builder()
-                    .tableName("Delivery")
+                    .tableName(nameTable)
                     .item(itemValues)
                     .build();
 
             PutItemResponse response = dynamoDbClient.putItem(request);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
+    }
+
+    private HashMap<String, AttributeValue>  extracted(String
+                                  message,
+                                  String typeName) throws JsonProcessingException{
+            HashMap<String, AttributeValue> map = new HashMap<>();
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+
+            switch (typeName) {
+                case "createdDelivery":
+                    DeliveryCreatedDTO delivery = objectMapper.readValue(message, DeliveryCreatedDTO.class);
+                    map.put("delivery_id", AttributeValue.builder().s(
+                            delivery.getDeliveryId().toString()).build());
+                    map.put("courierId", AttributeValue.builder().s(
+                            delivery.getCourierId().toString()).build());
+                    map.put("createdTimestamp", AttributeValue.builder().n(
+                            String.valueOf(delivery.getCreatedTimestamp().toEpochMilli())).build());
+                    map.put("value", AttributeValue.builder().n(delivery.getValue()).build());
+                    break;
+                case "adjustmentModified":
+                    AdjustementModified adjustementModified = objectMapper.readValue(message, AdjustementModified.class);
+                    map.put("adjustment_id",AttributeValue.builder().s(
+                            adjustementModified.getAdjustmentId().toString()).build());
+                    map.put("delivery_id", AttributeValue.builder().s
+                            (adjustementModified.getDeliveryId().toString()).build());
+                    map.put("courierId", AttributeValue.builder().s(
+                            adjustementModified.getCourierId().toString()).build());
+                    map.put("createdTimestamp", AttributeValue.builder().n(
+                            String.valueOf(adjustementModified.getCreatedTimestamp().toEpochMilli())).build());
+                    map.put("value", AttributeValue.builder().n(adjustementModified.getValue()).build());
+                    break;
+                case "bonusModified":
+                    BonusModified bonusModified = objectMapper.readValue(message, BonusModified.class);
+                    map.put("bonus_id", AttributeValue.builder().
+                            s(bonusModified.getBonusId().toString()).build());
+                    map.put("delivery_id", AttributeValue.builder().
+                            s(bonusModified.getDeliveryId().toString()).build());
+                    map.put("courierId",
+                            AttributeValue.builder().s(bonusModified.getCourierId().toString()).build());
+                    map.put("createdTimestamp", AttributeValue.builder().n(
+                            String.valueOf(bonusModified.getCreatedTimestamp().toEpochMilli())).build());
+                    map.put("value", AttributeValue.builder().n(bonusModified.getValue()).build());
+                    break;
+            }
+            return map;
+
     }
 }
