@@ -17,8 +17,13 @@ import java.util.HashMap;
 public class ServiceMessageConsumer {
 
 
-        @Autowired
         private DynamoDbClient dynamoDbClient;
+        public ServiceMessageConsumer() {
+        }
+        @Autowired
+        public ServiceMessageConsumer(DynamoDbClient dynamoDbClient) {
+            this.dynamoDbClient = dynamoDbClient;
+        }
 
         @RabbitListener(queues = "createdDelivery")
         public void consumeMessageCreated(String message) throws JsonProcessingException {
