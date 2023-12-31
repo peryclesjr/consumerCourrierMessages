@@ -60,7 +60,6 @@ public class ServiceMessageConsumerTest {
     @Test
     public void testSaveMessageDynamoDB_Success() throws JsonProcessingException {
 
-        // Substitua com uma mensagem válida
         String validMessage = """
                 {
                     "deliveryId": "5b8e27f4-8798-477b-9dec-55ae9ccc18f6",
@@ -68,15 +67,12 @@ public class ServiceMessageConsumerTest {
                     "createdTimestamp": 1703978522,
                     "value": "10.0"
                 }
-                """; // JSON válido correspondente a DeliveryCreatedDTO
+                """;
 
-        // Configuração do mock para simular uma resposta bem-sucedida
         when(dynamoDbClient.putItem((PutItemRequest) any())).thenReturn(PutItemResponse.builder().build());
 
-        // Executa o método com a mensagem válida
         serviceMessageConsumer.saveMessageDynamoDB(validMessage);
 
-        // Verifica se o método putItem foi chamado
         Mockito.verify(dynamoDbClient).putItem((PutItemRequest) any());
     }
 
